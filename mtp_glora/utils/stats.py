@@ -1,3 +1,4 @@
+import re
 from typing import Optional, Dict, List
 from dataclasses import dataclass
 
@@ -164,5 +165,6 @@ def format_metrics_line(metrics: dict, step: int) -> str:
 
     if 'train/chunks_used' in metrics:
         parts.append(f"Num. Processed Chunks: {int(metrics['train/chunks_used'])}")
+
 
     return " | ".join(parts)
