@@ -113,7 +113,7 @@ bash scripts/run_vllm.sh am_qwen3
 Launch distributed training:
 
 ```bash
-torchrun --standalone --nproc_per_node=8 mtp_glora.train \
+torchrun --standalone --nproc_per_node=8 -m mtp_glora.train \
   --model_path Qwen/Qwen3-8B \
   --train_data_path data/am_qwen3_vllm_output.json \
   --save_dir checkpoints/mtp_experiment \
@@ -211,7 +211,7 @@ The dataset builder (`mtp_glora/data_utils/dataset.py`) expects JSON with `input
 Launch distributed training on a single node (see `scripts/train.sh` for reference):
 
 ```bash
-torchrun --standalone --nproc_per_node=8 mtp_glora.train \
+torchrun --standalone --nproc_per_node=8 -m mtp_glora.train \
   --model_path meta-llama/Llama-3.1-8B-Instruct \
   --train_data_path data/training_data.json \
   --save_dir checkpoints/llama_mtp \
@@ -228,7 +228,7 @@ torchrun --standalone --nproc_per_node=8 mtp_glora.train \
 Seamlessly resume training from any checkpoint:
 
 ```bash
-torchrun --standalone --nproc_per_node=8 mtp_glora.train \
+torchrun --standalone --nproc_per_node=8 -m mtp_glora.train \
   --model_path meta-llama/Llama-3.1-8B-Instruct \
   --train_data_path data/training_data.json \
   --resume --checkpoint_dir checkpoints/llama_mtp
@@ -614,5 +614,6 @@ If you use MTP-GLoRA in your research or project, please cite:
 **Made with ❤️ by the open-source community**
 
 [⭐ Star us on GitHub](https://github.com/siihwanpark/MTP-GLoRA) • [🐛 Report Bug](https://github.com/siihwanpark/MTP-GLoRA/issues) • [💡 Request Feature](https://github.com/siihwanpark/MTP-GLoRA/issues)
+
 
 </div>
