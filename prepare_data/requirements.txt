@@ -1,0 +1,5 @@
+torch==2.7.1+cu126
+vllm
+transformers
+datasets
+flashinfer-python
