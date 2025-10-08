@@ -25,7 +25,7 @@ class DataArguments:
     build_dataset_num_proc: int = 4
     num_workers: int = 4
     dataset_cache_dir: Optional[str] = None
-    dataset_cache_rebuild: bool = False
+    build_dataset_cache: bool = False
     shuffle: bool = True
     pin_memory: bool = True
     group_by_length: bool = True

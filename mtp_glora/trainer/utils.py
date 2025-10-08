@@ -101,14 +101,12 @@ def get_train_dataloader(args, tokenizer: PreTrainedTokenizer):
         cache_root=cache_root,
     )
 
-    # force rebuild option
-    force_rebuild = bool(getattr(args, "dataset_cache_rebuild", False))
-
-    # 1) try cache
-    mtp_dataset = None if force_rebuild else load_cached_dataset(cache_dir)
-
+    mtp_dataset = load_cached_dataset(cache_dir)
     if mtp_dataset is None:
-        # 2) rank0 only build & save
+        if not args.build_dataset_cache:
+            raise RuntimeError(f"Dataset cache has not been built. Please run with --build_dataset_cache first.")
+
+        # rank0 only build & save
         if is_dist_main():
             print(f"[cache] building MTP dataset → {cache_dir}")
             with open(args.train_data_path, "r") as f:
@@ -116,7 +114,7 @@ def get_train_dataloader(args, tokenizer: PreTrainedTokenizer):
             train_data = data.get("results", data)
             ds_raw = Dataset.from_list(train_data)
 
-            # build with existing function
+            # build
             mtp_dataset = build_mtp_dataset(
                 dataset=ds_raw,
                 tokenizer=tokenizer,
@@ -126,7 +124,7 @@ def get_train_dataloader(args, tokenizer: PreTrainedTokenizer):
                 num_proc=args.build_dataset_num_proc,
             )
 
-            # meta information for saving
+            # meta information
             meta = {
                 "version": MTP_DATASET_BUILD_VERSION,
                 "args": {
@@ -137,7 +135,7 @@ def get_train_dataloader(args, tokenizer: PreTrainedTokenizer):
             save_dataset_to_cache(mtp_dataset, cache_dir, meta)
             print(f"[Dataset Cache] MTP dataset saved at {cache_dir}")
         
-        # 3) all ranks synchronize and load
+        # all ranks synchronize and load
         barrier()
 
         if not is_dist_main():
@@ -149,13 +147,13 @@ def get_train_dataloader(args, tokenizer: PreTrainedTokenizer):
             print(f"[Dataset Cache] MTP dataset loaded from {cache_dir}")
         barrier()
 
-    # torch format is released, so set_format again
+    # set_format again
     mtp_dataset.set_format(
         type="torch",
         columns=["input_ids", "position_ids", "gate_mask", "regular_token_mask", "total_len"],
     )
 
-    # the rest is the same
+    # prepare dataloader
     loader, sampler = prepare_mtp_dataloader(
         dataset=mtp_dataset,
         tokenizer=tokenizer,

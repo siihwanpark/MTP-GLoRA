@@ -108,7 +108,20 @@ Use vLLM for efficient inference:
 bash scripts/run_vllm.sh am_qwen3
 ```
 
-### Step 4: Train MTP Model
+### Step 4: Build MTP Dataset Cache
+Launch the training script with the `--build_dataset_cache` flag using a CPU or a single GPU. Using multiple GPUs may result in a distributed timeout error.
+
+```bash
+export CUDA_VISIBLE_DEVICES="" # (or CUDA_VISIBLE_DEVICES="0")
+torchrun --standalone --nproc_per_node=1 -m mtp_glora.train \
+  --model_path Qwen/Qwen3-8B \
+  --train_data_path data/am_qwen3_vllm_output.json \
+  --build_dataset_cache --draft_length 4
+```
+
+> **Note:** The cache key (hash key) of a dataset is determined by its `absolute data path`, `creation time`, and `file size`. If any of these change, the cached dataset becomes invalid. In such cases, the `cache_dir` can be manually set inside the `get_train_dataloader` function to use a prebuilt data cache, but this is generally not recommended.
+
+### Step 5: Train MTP Model
 
 Launch distributed training:
 
@@ -118,7 +131,7 @@ torchrun --standalone --nproc_per_node=8 -m mtp_glora.train \
   --train_data_path data/am_qwen3_vllm_output.json \
   --save_dir checkpoints/mtp_experiment \
   --report_to tensorboard \
-  --fuse_weights \
+  --fuse_weights --draft_length 4 \
   --lr 2e-4 --warmup_steps 5000 --max_steps 50000 \
   --lora_rank 16 --lora_alpha 32 --lora_dropout 0.05 \
   --chunk_size 4096 --min_chunk_size 1024 \
@@ -257,7 +270,7 @@ torchrun --standalone --nproc_per_node=8 -m mtp_glora.train \
 | `--train_data_path` | Path to training JSON file | Required |
 | `--eval_data_path` | Path to evaluation JSON file | `None` |
 | `--dataset_cache_dir` | Dataset cache location | Auto |
-| `--dataset_cache_rebuild` | Force rebuild cache | `False` |
+| `--build_dataset_cache` | build dataset cache | `False` |
 | `--num_workers` | DataLoader workers | `4` |
 | `--group_by_length` | Length-grouped batching | `True` |
 
@@ -523,8 +536,9 @@ Cache hash includes:
 
 **Reference Setup:** 8×H100 (80GB), Qwen3-8B, draft_length=4, chunk_size=5120
 - **Training Speed**: ~70 hours for 30000 steps
-- **Memory**: ~80 GB per GPU
+- **VRAM Usage**: ~75 GB per GPU
 - **First step**: Slower due to Triton autotuning
+- **Building & Caching Dataset**: ~5 hours for build-shard-save and ~100GB storage (for 114k samples)
 
 ---
 

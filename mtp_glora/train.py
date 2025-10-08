@@ -34,13 +34,17 @@ def main():
     # Init distributed
     is_dist, local_rank = setup_distributed_training(args)
 
-    # Tracker
-    tracker = create_tracker(args)
-
     # Tokenizer/Model
     tokenizer = load_tokenizer(args, append_mask_token=True)
-    base_model = load_model_and_apply_lora(args, tokenizer, fuse_weights=args.fuse_weights)
 
+    # DataLoader
+    train_loader, distributed_length_sampler = get_train_dataloader(args, tokenizer)
+    if args.dataset_cache_build:
+        print_on_rank0("Dataset cache has been successfully built. Please proceed the training without --dataset_cache_build.")
+        return
+    if is_dist: dist.barrier(get_dp_group())
+
+    base_model = load_model_and_apply_lora(args, tokenizer, fuse_weights=args.fuse_weights)
     model = MTPModel(
         model=base_model,
         draft_length=args.draft_length,
@@ -55,10 +59,6 @@ def main():
         )
         print_on_rank0("Wrapped model with DDP")
     
-    # DataLoader
-    train_loader, distributed_length_sampler = get_train_dataloader(args, tokenizer)
-    if is_dist: dist.barrier(get_dp_group())
-
     # Optimizer/Scheduler
     rms_params = [m.weight for m in model.module.sampler.modules() if isinstance(m, RMSNorm)]
     other_params = [p for n,p in model.module.named_parameters() if p.requires_grad and (not n.endswith("norm.weight"))]
@@ -79,6 +79,9 @@ def main():
         local_rank=local_rank,
         distributed_length_sampler=distributed_length_sampler,
     )
+
+    # Tracker
+    tracker = create_tracker(args)
 
     # Step counter
     global_step = 0
