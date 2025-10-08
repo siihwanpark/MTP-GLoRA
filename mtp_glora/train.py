@@ -39,7 +39,7 @@ def main():
 
     # DataLoader
     train_loader, distributed_length_sampler = get_train_dataloader(args, tokenizer)
-    if args.dataset_cache_build:
+    if args.build_dataset_cache:
         print_on_rank0("Dataset cache has been successfully built. Please proceed the training without --dataset_cache_build.")
         return
     if is_dist: dist.barrier(get_dp_group())
